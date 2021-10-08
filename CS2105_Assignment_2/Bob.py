@@ -22,14 +22,14 @@ class Bob:
 				decoded_message = json.loads(zlib.decompress(message).decode())
 
 				if decoded_message[1] == ack:
-					data = self.create_packet(ack)
+					data = self.create_ack(ack)
 					ack += 1
 					ack //= 2
 					self.socket.sendto(data, address)
 					print(decoded_message[2])
 
 				else:
-					data = self.create_packet((ack+1)//2)
+					data = self.create_ack((ack+1)//2)
 					self.scoekt.sendto(data,address)
 
 				if not decoded_message:
@@ -44,7 +44,7 @@ class Bob:
 		else:
 			return False
 
-	def create_packet(self, ack):
+	def create_ack(self, ack):
 		checksum = zlib.crc32(json.dumps(["ack", ack]).encode)
 		packet = zlib.compress(json.dumps([checksum,"ack", ack]).encode)
 

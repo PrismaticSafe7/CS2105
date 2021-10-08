@@ -3,37 +3,61 @@ import json
 import zlib
 import sys
 
-
 class Alice():
     def __init__(self,port):
         self.port = port
         self.socket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-        socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+    def Server_process(self):
+        self.socket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.connect(("", self.port))
+        info = 
+        data = ''
+        ack = 0
+        noMoreData = False
 
-    def Work(self):
-        return
+        while not noMoreData:
+            data = sys.stdin.read(50)
+            packet = create_packet(ack, data)
+            self.socket.send(packet)
+            While True:
+                try:
+                    self.socket.settimeout(0.0005)
+                    message, address = self.socket.recv(2048)
+                    if checksum_check(message) && self.received_ack(message, ack):
+                        ack += 1
+                        ack //= 2
+                        break
 
-    def timeout_setting(self,time):
-        self.socket.settimeout(time)
+                    else:
+                        self.socket.send(packet)
+                except:
+                    self.socket.send(packet)
 
-    def send(self, packet):
-        self.socket.send(packet)
-
-    def receive(self,data):
-        return self.socket.recv(data)
+            if not data:
+                noMoreData = True
 
     def create_packet(self,ack,data):
         checksum = zlib.crc32(json.dumps([ack,data]).encode())
-        return zlib.compress(json.dumps([ack,data,checksum]).encode())
+        return zlib.compress(json.dumps([checksum,ack,data]).encode())
 
-    def check_corrupt(self,packet):
+    def checksum_check(self, message):
         try:
-            updated_packet = json.loads(zlib.decompress(packet).decode())
-            return updated_packet[2] != zlib.crc32(json.dumps(updated_packet[0:2]).encode())
-        except:
-            return True
+            message = json.loads(zlib.decompress(message).decode())
+            return message[0] == zlib.crc32(json.dumps([message[1],message[2]]).encode)
 
-    def get_ack(self,packet,num):
+        else:
+            return False
+
+    def received_ack(self,packet,num):
         packet = json.loads(zlib.decompress(packet).decode())
-        return packet[0] == num and packet[1] == 'ack'
+        return packet[0] == 'ack' and packet[1] == num
+
+
+if __name__ == "__main__":
+    portNumber = int(sys.argv[1])
+    server = WebServer(portNumber)
+    server.Server_process()
+
+
