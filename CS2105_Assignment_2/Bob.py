@@ -41,7 +41,7 @@ class Bob:
 			message = json.loads(zlib.decompress(message).decode())
 			return message[0] == zlib.crc32(json.dumps([message[1],message[2]]).encode)
 
-		else:
+		except:
 			return False
 
 	def create_ack(self, ack):
