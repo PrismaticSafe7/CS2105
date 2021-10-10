@@ -1,55 +1,46 @@
 import socket
 import zlib
 import sys
-import json
 
-class Bob:
+class Bob():
 	def __init__(self, port):
 		self.port = port
+		self.ack = 1
+		self.socket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+		self.socket.bind(('localhost',self.port))
 
 	def Server_process(self):
-		self.socket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-		self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-		self.socket.bind(('',self.port))
+		data = b''
 
-		data = ''
-		ack = 0
-		noMoreData = False
+		while True:
+			message, address = self.socket.recvfrom(64)
+			if self.checksum_check(message):
+				num = int(message[4:5].decode())
+				data = message[5:].decode()
 
-		while not noMoreData:
-			message, address = self.socket.recvfrom()
-			if checksum_check(message):
-				decoded_message = json.loads(zlib.decompress(message).decode())
-
-				if decoded_message[1] == ack:
-					data = self.create_ack(ack)
-					ack += 1
-					ack //= 2
-					self.socket.sendto(data, address)
-					print(decoded_message[2])
-
+				if num == self.ack:
+					ack_message = self.create_ack(self.ack)
+					self.ack += 1
+					self.ack %= 2
+					self.socket.sendto(ack_message, address)
+					print(data)
 				else:
-					data = self.create_ack((ack+1)//2)
-					self.scoekt.sendto(data,address)
+					data = self.create_ack(self.ack*(-1))
+					self.socket.sendto(data,address)
 
-				if not decoded_message:
-					noMoreData == True
-
-	
 	def checksum_check(self, message):
-		try:
-			message = json.loads(zlib.decompress(message).decode())
-			return message[0] == zlib.crc32(json.dumps([message[1],message[2]]).encode)
-
-		except:
-			return False
+		checksum = int.from_bytes(message[0:4],byteorder = 'little')
+		data = zlib.crc32(message[4:])
+		return checksum == data
 
 	def create_ack(self, ack):
-		checksum = zlib.crc32(json.dumps(["ack", ack]).encode)
-		packet = zlib.compress(json.dumps([checksum,"ack", ack]).encode)
+		ack_num = (str(ack)).encode()
+		checksum = zlib.crc32(ack_num).to_bytes(4,byteorder = 'little')
+		packet = checksum + ack_num
+		return packet
 
 
 if __name__ == "__main__":
     portNumber = int(sys.argv[1])
     server = Bob(portNumber)
-    server.ServerSocket()
+    server.Server_process()

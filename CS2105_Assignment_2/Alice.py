@@ -1,5 +1,4 @@
 import socket
-import json
 import zlib
 import sys
 
@@ -9,55 +8,50 @@ class Alice():
         self.socket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 
     def Server_process(self):
-        self.socket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.socket.connect(("", self.port))
-        info = 
         data = ''
-        ack = 0
-        noMoreData = False
+        ack = 1
 
-        while not noMoreData:
-            data = sys.stdin.read(50)
-            packet = create_packet(ack, data)
-            self.socket.send(packet)
-            While True:
-                try:
-                    self.socket.settimeout(0.0005)
-                    message, address = self.socket.recv(2048)
-                    if checksum_check(message) && self.received_ack(message, ack):
-                        ack += 1
-                        ack //= 2
-                        break
+        for line in sys.stdin:
+            data = line
+            while (len(data) > 0):
+                message = data[0:59]
 
-                    else:
-                        self.socket.send(packet)
-                except:
-                    self.socket.send(packet)
+                packet = self.create_packet(ack, message)
+                self.socket.sendto(packet,('localhost',self.port))
 
-            if not data:
-                noMoreData = True
+                while True:
+                    self.socket.settimeout(0.005)
+                    try:
+                        message, address = self.socket.recvfrom(64)
+                        if self.checksum_check(message) and self.received_ack(message, ack):
+                            ack *= -1
+                            break
+
+                        else:
+                            self.socket.sendto(packet,('localhost',self.port))
+                    except:
+                        self.socket.sendto(packet,('localhost',self.port))
 
     def create_packet(self,ack,data):
-        checksum = zlib.crc32(json.dumps([ack,data]).encode())
-        return zlib.compress(json.dumps([checksum,ack,data]).encode())
+        data = data.encode()
+        ack_num = (str(ack)).encode()
+        checksum = zlib.crc32(ack_num + data).to_bytes(4,byteorder='little')
+        packet = checksum + ack_num + data
+        return packet
 
     def checksum_check(self, message):
-        try:
-            message = json.loads(zlib.decompress(message).decode())
-            return message[0] == zlib.crc32(json.dumps([message[1],message[2]]).encode)
-
-        else:
-            return False
+        ack = message[4:]
+        checksum = int.from_byte(message[0:4], 'little')
+        print(checksum)
+        return zlib.crc32(ack) == checksum
 
     def received_ack(self,packet,num):
-        packet = json.loads(zlib.decompress(packet).decode())
-        return packet[0] == 'ack' and packet[1] == num
+        ack = int(packet.decode())
+        print("received")
+        return  ack == num
 
 
 if __name__ == "__main__":
     portNumber = int(sys.argv[1])
-    server = WebServer(portNumber)
+    server = Alice(portNumber)
     server.Server_process()
-
-
