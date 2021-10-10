@@ -20,8 +20,7 @@ class Bob():
 
 				if num == self.ack:
 					ack_message = self.create_ack(self.ack)
-					self.ack += 1
-					self.ack %= 2
+					self.ack *= -1
 					self.socket.sendto(ack_message, address)
 					print(data)
 				else:
