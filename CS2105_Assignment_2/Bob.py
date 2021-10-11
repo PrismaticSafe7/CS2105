@@ -5,7 +5,7 @@ import sys
 class Bob():
 	def __init__(self, port):
 		self.port = port
-		self.ack = 1
+		self.ack = 0
 		self.socket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 		self.socket.bind(('localhost',self.port))
 
@@ -16,15 +16,19 @@ class Bob():
 			message, address = self.socket.recvfrom(64)
 			if self.checksum_check(message):
 				num = int(message[4:5].decode())
-				data = message[5:].decode()
+				data = message[5:]
 
 				if num == self.ack:
 					ack_message = self.create_ack(self.ack)
-					self.ack *= -1
+					self.ack = (self.ack + 1) % 2
 					self.socket.sendto(ack_message, address)
-					print(data)
+					if data.find(b'\n') != -1:
+						print(data.decode(), end='')
+					else:
+						print(data.decode())
+
 				else:
-					data = self.create_ack(self.ack*(-1))
+					ack_message = self.create_ack(self.ack*(-1))
 					self.socket.sendto(data,address)
 
 	def checksum_check(self, message):
