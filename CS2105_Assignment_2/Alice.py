@@ -6,31 +6,28 @@ class Alice():
     def __init__(self,port):
         self.port = port
         self.socket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+        self.ack = 0
 
     def Server_process(self):
-        ack = 0
-
         for line in sys.stdin:
             data = line
             while (len(data) != 0):
                 message = data[0:59]
 
-                packet = self.create_packet(ack, message)
+                packet = self.create_packet(self.ack, message)
                 self.socket.sendto(packet,('localhost',self.port))
 
-                self.socket.settimeout(0.005)
+                self.socket.settimeout(0.05)
                 try:
                     message, address = self.socket.recvfrom(64)
                     checksum = message[0:4]
                     ack_num = message[4:5]
-                    if self.checksum_check(ack_num, checksum) and self.received_ack(ack_num, ack):
-                        ack = (ack + 1) % 2
-                        break
+                    if self.checksum_check(ack_num, checksum) and self.received_ack(ack_num, self.ack):
+                        self.ack = (self.ack + 1) % 2
+                        data = data[59:]
 
-                    else:
-                        self.socket.sendto(packet,('localhost',self.port))
                 except:
-                    self.socket.sendto(packet,('localhost',self.port))
+                    continue
 
     def create_packet(self,ack,data):
         data = data.encode()

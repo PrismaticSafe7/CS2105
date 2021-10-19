@@ -10,26 +10,23 @@ class Bob():
 		self.socket.bind(('localhost',self.port))
 
 	def Server_process(self):
-		data = b''
-
 		while True:
-			message, address = self.socket.recvfrom(64)
-			if self.checksum_check(message):
-				num = int(message[4:5].decode())
+			data = b''
+			while True:
+				message, address = self.socket.recvfrom(64)
+				num = message[4:5].decode()
 				data = message[5:]
-
-				if num == self.ack:
+				if self.checksum_check(message) and (int(num) == self.ack):
+					num = int(num)
 					ack_message = self.create_ack(self.ack)
 					self.ack = (self.ack + 1) % 2
 					self.socket.sendto(ack_message, address)
-					if data.find(b'\n') != -1:
-						print(data.decode(), end='')
-					else:
-						print(data.decode())
+					print(data.decode(), end='')
+					data = b''
 
 				else:
-					ack_message = self.create_ack(self.ack*(-1))
-					self.socket.sendto(data,address)
+					ack_message = self.create_ack((self.ack + 1) % 2)
+					self.socket.sendto(ack_message,address)
 
 	def checksum_check(self, message):
 		checksum = int.from_bytes(message[0:4],byteorder = 'little')
