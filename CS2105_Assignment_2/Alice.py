@@ -17,7 +17,7 @@ class Alice():
                 packet = self.create_packet(self.ack, message)
                 self.socket.sendto(packet,('localhost',self.port))
 
-                self.socket.settimeout(0.05)
+                self.socket.settimeout(0.005)
                 try:
                     message, address = self.socket.recvfrom(64)
                     checksum = message[0:4]
